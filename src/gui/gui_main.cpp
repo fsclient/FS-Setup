@@ -70,7 +70,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 		hProgress = CreateWindowEx(NULL, PROGRESS_CLASS, NULL,
 			WS_CHILD | WS_VISIBLE | PBS_MARQUEE,
 			20, 70, 245, 20, hwnd, NULL, hInst, NULL);
-		SendMessage(hProgress, PBM_SETMARQUEE, true, 0);
 
 		HFONT hFont = CreateFont(18, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, UNICODE,
 			OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY,

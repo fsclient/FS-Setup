@@ -29,14 +29,16 @@ void gui::SetPending(bool value) {
 	}
 }
 
-void gui::SetLabel(std::wstring text) {
+void gui::SetLabel(std::string text) {
+	std::wstring wstr = boost::nowide::widen(text);
 	HWND hLabelStatic = GetLabelStaticHWND();
-	SetWindowText(hLabelStatic, text.c_str());
+	SetWindowText(hLabelStatic, wstr.c_str());
 }
 
-void gui::SetProgressStatic(std::wstring progress) {
+void gui::SetProgressStatic(std::string progress) {
+	std::wstring wstr = boost::nowide::widen(progress);
 	HWND hProgressStatic = GetProgressStaticHWND();
-	SetWindowText(hProgressStatic, progress.c_str());
+	SetWindowText(hProgressStatic, wstr.c_str());
 }
 
 void gui::SetProgress(uint64_t len, uint64_t total) {

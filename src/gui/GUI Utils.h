@@ -11,8 +11,8 @@ namespace gui {
 	int ErrorMessageBox();
 	void SetPending(bool value);
 
-	void SetLabel(std::wstring text);
-	void SetProgressStatic(std::wstring progress);
+	void SetLabel(std::string text);
+	void SetProgressStatic(std::string progress);
 	void SetProgress(uint64_t, uint64_t);
 	void SetFullProgress();
 }
