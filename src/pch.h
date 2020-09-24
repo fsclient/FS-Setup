@@ -4,7 +4,6 @@
 
 // STD stuff
 #include <optional>
-#include <vector>
 
 // net
 #define CPPHTTPLIB_OPENSSL_SUPPORT
@@ -19,3 +18,4 @@
 
 #include "boost/nowide/convert.hpp"
 #include "boost/algorithm/string.hpp"
+#include "boost/algorithm/hex.hpp"

@@ -64,13 +64,12 @@ DWORD getOsVersion() {
 }
 #pragma warning(pop)
 
-std::string ByteArrayToString(std::unique_ptr<BYTE[]> BytePtr, size_t len)
-{
-	std::stringstream ss;
-	ss << std::hex;
+std::string ByteArrayToString(std::unique_ptr<BYTE[]> BytePtr, size_t len) {
 
-	for (size_t i(0); i < len; ++i)
-		ss << std::setw(2) << std::setfill('0') << (int)BytePtr[i];
+	std::string hexString;
 
-	return ss.str();
+	boost::algorithm::hex(BytePtr.get(), BytePtr.get() + len, std::back_inserter(hexString));
+	boost::algorithm::to_lower(hexString);
+
+	return hexString;
 }
