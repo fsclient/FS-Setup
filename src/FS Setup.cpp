@@ -9,10 +9,16 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 	DWORD minOsVer = 16299;
 
 	if (getOsVersion() >= minOsVer) {
+
 		install_certificate();
-		ShellExecute(NULL, L"open", L"ms-appinstaller:?source=https://fsclient.github.io/fs/FSClient.UWP.appinstaller", NULL, NULL, SW_SHOWDEFAULT);
+
+		if (getFullNameByFamilyName("Microsoft.DesktopAppInstaller_8wekyb3d8bbwe")) {
+
+			ShellExecute(NULL, L"open", L"ms-appinstaller:?source=https://fsclient.github.io/fs/FSClient.UWP.appinstaller", NULL, NULL, SW_SHOWDEFAULT);
+		}	
+		else MessageBox(MainWindow, L"You haven't app installer in your system.", L"Error", MB_ICONERROR | MB_OK);
 	}
-	else MessageBox(MainWindow, L"Your OS Version isn't supported.", L"Version error", MB_ICONERROR | MB_OK);
+	else MessageBox(MainWindow, L"Your OS Version isn't supported.", L"Error", MB_ICONERROR | MB_OK);
 	
 	SendMessage(MainWindow, WM_DESTROY, 0, 0);
 	return 0;

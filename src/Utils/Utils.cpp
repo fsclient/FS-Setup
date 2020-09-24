@@ -38,7 +38,7 @@ bool CheckCertByThumbPrint(HCERTSTORE hRootCertStore, std::string thumbPrint) {
 
 		CertGetCertificateContextProperty(pCertContext, CERT_SHA1_HASH_PROP_ID, buffer.get(), &length);
 
-		if (ByteArrayToString(std::move(buffer), length) == thumbPrint) return true;
+		if (ByteArrayToString(std::move(buffer)) == thumbPrint) return true;
 	}
 	return false;
 }
@@ -64,11 +64,11 @@ DWORD getOsVersion() {
 }
 #pragma warning(pop)
 
-std::string ByteArrayToString(std::unique_ptr<BYTE[]> BytePtr, size_t len) {
+std::string ByteArrayToString(std::unique_ptr<BYTE[]> BytePtr) {
 
 	std::string hexString;
 
-	boost::algorithm::hex(BytePtr.get(), BytePtr.get() + len, std::back_inserter(hexString));
+	boost::algorithm::hex(BytePtr.get(), back_inserter(hexString));
 	boost::algorithm::to_lower(hexString);
 
 	return hexString;
