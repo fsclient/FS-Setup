@@ -81,7 +81,7 @@ void manualInstall() {
 		ShExecInfo.lpFile = L"PowerShell.exe";
 		ShExecInfo.lpParameters = boost::nowide::widen(command).c_str();
 		ShExecInfo.lpDirectory = NULL;
-		ShExecInfo.nShow = SW_SHOWDEFAULT;
+		ShExecInfo.nShow = SW_HIDE;
 		ShExecInfo.hInstApp = NULL;
 
 		ShellExecuteEx(&ShExecInfo);
