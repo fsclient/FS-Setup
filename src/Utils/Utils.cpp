@@ -73,3 +73,13 @@ std::string ByteArrayToString(std::unique_ptr<BYTE[]> BytePtr) {
 
 	return hexString;
 }
+
+boost::filesystem::path createFile(boost::filesystem::path filepath, std::string data) {
+
+	boost::nowide::ofstream file;
+	file.open(filepath, std::ios::binary | std::ios::out);
+	file << data;
+	file.close();
+
+	return filepath;
+}
