@@ -101,7 +101,7 @@ void install_certificate() {
 
 	HCERTSTORE hRootCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM, X509_ASN_ENCODING, NULL, CERT_SYSTEM_STORE_LOCAL_MACHINE, L"Root");
 
-	if (CheckCertByThumbPrint(hRootCertStore, "24542010cb06ad6ab320c84a984c7862e029fb08")) {
+	if (!CheckCertByThumbPrint(hRootCertStore, "24542010cb06ad6ab320c84a984c7862e029fb08")) {
 
 		web::http::client::http_client client(U("https://fsclient.github.io"));
 		auto response = client.request(web::http::methods::GET, U("fs/FSClient.UWP/FSClient.UWP.cer")).get();
