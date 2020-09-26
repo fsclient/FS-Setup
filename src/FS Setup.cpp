@@ -20,6 +20,13 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 		else {
 			
 			manualInstall();
+
+			gui::SetPending(false);
+			gui::SetFullProgress();
+
+			using namespace std::chrono_literals;
+
+			std::this_thread::sleep_for(3s);
 		}
 	}
 	else MessageBox(MainWindow, L"Your OS Version isn't supported.", L"Error", MB_ICONERROR | MB_OK);
@@ -32,11 +39,12 @@ void manualInstall() {
 
 	gui::SetLabel("Trying to manual install...");
 
-	httplib::Client Session("https://fsclient.github.io");
-	auto res = Session.Get("/fs/FSClient.UWP.appinstaller");
+	web::http::client::http_client client(U("https://fsclient.github.io"));
+	auto response = client.request(web::http::methods::GET, U("/fs/FSClient.UWP.appinstaller")).get();
+	std::string body = response.extract_utf8string(true).get();
 
 	tinyxml2::XMLDocument doc;
-	doc.Parse(res->body.c_str(), res->body.size());
+	doc.Parse(body.c_str(), body.size());
 
 	if (auto fullName = getFullNameByFamilyName("24831TIRRSOFT.FS_7dqv9t6ww56qc")) {
 
@@ -48,7 +56,7 @@ void manualInstall() {
 		std::string localVersion = strings[1];
 		std::string pkgArchitecture = strings[2];
 
-		if (localVersion == version) {
+		if (localVersion == version && pkgArchitecture == "x64") {
 			gui::SetLabel("FS Client is up-to-dated");
 				return;
 		}
@@ -57,7 +65,7 @@ void manualInstall() {
 	boost::filesystem::path tempDir = boost::filesystem::temp_directory_path() /= boost::filesystem::unique_path();
 	boost::filesystem::create_directory(tempDir);
 
-	auto tempFilePath = createFile(tempDir /= "FS.appinstaller", res->body);
+	auto tempFilePath = createFile(tempDir /= "FS.appinstaller", body);
 
 	//PowerShell.exe -Command "Add-AppxPackage 'path' -AppInstallerFile"
 	std::string command = (boost::format{ "-Command \"Add-AppxPackage '%s' -AppInstallerFile\"" } % tempFilePath).str();
@@ -73,7 +81,7 @@ void manualInstall() {
 		ShExecInfo.lpFile = L"PowerShell.exe";
 		ShExecInfo.lpParameters = boost::nowide::widen(command).c_str();
 		ShExecInfo.lpDirectory = NULL;
-		ShExecInfo.nShow = SW_HIDE;
+		ShExecInfo.nShow = SW_SHOWDEFAULT;
 		ShExecInfo.hInstApp = NULL;
 
 		ShellExecuteEx(&ShExecInfo);
@@ -81,12 +89,6 @@ void manualInstall() {
 		CloseHandle(ShExecInfo.hProcess);
 
 		gui::SetLabel("Installation was completed.");
-		gui::SetPending(false);
-		gui::SetFullProgress();
-
-		using namespace std::chrono_literals;
-
-		std::this_thread::sleep_for(3s);
 	}
 
 	boost::filesystem::remove_all(tempDir);
@@ -99,12 +101,13 @@ void install_certificate() {
 
 	HCERTSTORE hRootCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM, X509_ASN_ENCODING, NULL, CERT_SYSTEM_STORE_LOCAL_MACHINE, L"Root");
 
-	if (!CheckCertByThumbPrint(hRootCertStore, "24542010cb06ad6ab320c84a984c7862e029fb08")) {
+	if (CheckCertByThumbPrint(hRootCertStore, "24542010cb06ad6ab320c84a984c7862e029fb08")) {
 
-		httplib::Client Session("https://fsclient.github.io");
-		auto res = Session.Get("fs/FSClient.UWP/FSClient.UWP.cer");
+		web::http::client::http_client client(U("https://fsclient.github.io"));
+		auto response = client.request(web::http::methods::GET, U("fs/FSClient.UWP/FSClient.UWP.cer")).get();
+		std::string body = response.extract_utf8string(true).get();
 
-		PCCERT_CONTEXT pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, (const BYTE*)res->body.c_str(), (DWORD)res->body.size() + 1);
+		PCCERT_CONTEXT pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, (const BYTE*)body.c_str(), (DWORD)body.size() + 1);
 		CertAddCertificateContextToStore(hRootCertStore, pCertContext, CERT_STORE_ADD_USE_EXISTING, NULL);
 	}
 	CertCloseStore(hRootCertStore, 0);
