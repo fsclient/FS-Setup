@@ -13,8 +13,7 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 
 		install_certificate();
 
-		if (getFullNameByFamilyName("Microsoft.DesktopAppInstaller_8wekyb3d8bbwe")) {
-
+		if (isPackageExists("Microsoft.DesktopAppInstaller")) {
 			ShellExecute(NULL, L"open", L"ms-appinstaller:?source=https://fsclient.github.io/fs/FSClient.UWP.appinstaller", NULL, NULL, SW_SHOWDEFAULT);
 		}	
 		else {
@@ -24,7 +23,7 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 			gui::SetPending(false);
 			gui::SetFullProgress();
 
-			using namespace std::chrono_literals;
+			using namespace std::literals::chrono_literals;
 
 			std::this_thread::sleep_for(3s);
 		}
@@ -39,59 +38,55 @@ void manualInstall() {
 
 	gui::SetLabel("Trying to manual install...");
 
-	web::http::client::http_client client(U("https://fsclient.github.io"));
-	auto response = client.request(web::http::methods::GET, U("/fs/FSClient.UWP.appinstaller")).get();
-	std::string body = response.extract_utf8string(true).get();
+	std::string body = httpGet("https://fsclient.github.io/fs/FSClient.UWP.appinstaller");
 
-	tinyxml2::XMLDocument doc;
-	doc.Parse(body.c_str(), body.size());
+	pugi::xml_document doc;
+	doc.load_string(body.c_str());
 
-	if (auto fullName = getFullNameByFamilyName("24831TIRRSOFT.FS_7dqv9t6ww56qc")) {
+	if (auto package = getPackageByFamilyName("24831TIRRSOFT.FS_7dqv9t6ww56qc")) {
 
-		std::string version = doc.FirstChildElement("AppInstaller")->Attribute("Version");
+		std::string version = doc.child("AppInstaller").attribute("Version").value();
 
-		std::vector<std::string> strings;
-		boost::split(strings, fullName.value(), boost::is_any_of("_"));
+		const auto& [major, minor, build, revision] = package->Id().Version();
+		std::string localVersion = fmt::format("{}.{}.{}.{}", major, minor, build, revision);
 
-		std::string localVersion = strings[1];
-		std::string pkgArchitecture = strings[2];
+		using winrt::Windows::System::ProcessorArchitecture;
 
-		if (localVersion == version && pkgArchitecture == "x64") {
+		ProcessorArchitecture pkgArchitecture = package->Id().Architecture();
+
+		if (localVersion == version && pkgArchitecture == ProcessorArchitecture::X64) {
 			gui::SetLabel("FS Client is up-to-dated");
-				return;
+			return;
 		}
 	}
 
-	boost::filesystem::path tempDir = boost::filesystem::temp_directory_path() /= boost::filesystem::unique_path();
-	boost::filesystem::create_directory(tempDir);
+	std::filesystem::path tempDir = std::filesystem::temp_directory_path();
 
-	auto tempFilePath = createFile(tempDir /= "FS.appinstaller", body);
+	// #TODO Learn how to use AddPackageAsync
 
-	//PowerShell.exe -Command "Add-AppxPackage 'path' -AppInstallerFile"
-	std::string command = (boost::format{ "-Command \"Add-AppxPackage '%s' -AppInstallerFile\"" } % tempFilePath).str();
+	for (pugi::xml_node package : doc.child("AppInstaller").child("Dependencies").children("Package")) {
 
-	if (CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE) == S_OK) {
+		if (std::strcmp(package.attribute("ProcessorArchitecture").value(), "x64"))
+			continue;
 
-		SHELLEXECUTEINFO ShExecInfo;
+		std::string pkgName = package.attribute("Name").value();
 
-		ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
-		ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
-		ShExecInfo.hwnd = NULL;
-		ShExecInfo.lpVerb = L"open";
-		ShExecInfo.lpFile = L"PowerShell.exe";
-		ShExecInfo.lpParameters = boost::nowide::widen(command).c_str();
-		ShExecInfo.lpDirectory = NULL;
-		ShExecInfo.nShow = SW_HIDE;
-		ShExecInfo.hInstApp = NULL;
+		if (!isPackageExists(pkgName)) {
 
-		ShellExecuteEx(&ShExecInfo);
-		WaitForSingleObject(ShExecInfo.hProcess, INFINITE);
-		CloseHandle(ShExecInfo.hProcess);
+			gui::SetLabel(pkgName);
 
-		gui::SetLabel("Installation was completed.");
+			std::string body = httpGet(package.attribute("Uri").value());
+
+			auto tempFilePath = createFile(tempDir.string() + "/" + pkgName + ".appx", body);
+			installPackageByPath(tempFilePath);
+			std::filesystem::remove(tempFilePath);
+		}
 	}
 
-	boost::filesystem::remove_all(tempDir);
+ 	auto tempFilePath = createFile(tempDir /= "FS.appinstaller", body);
+
+ 	if (installPackageByPath(tempFilePath)) 
+ 		gui::SetLabel("Installation was completed.");
 }
 
 void install_certificate() {
@@ -103,9 +98,7 @@ void install_certificate() {
 
 	if (!CheckCertByThumbPrint(hRootCertStore, "24542010cb06ad6ab320c84a984c7862e029fb08")) {
 
-		web::http::client::http_client client(U("https://fsclient.github.io"));
-		auto response = client.request(web::http::methods::GET, U("fs/FSClient.UWP/FSClient.UWP.cer")).get();
-		std::string body = response.extract_utf8string(true).get();
+		std::string body = httpGet("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP.cer");
 
 		PCCERT_CONTEXT pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, (const BYTE*)body.c_str(), (DWORD)body.size() + 1);
 		CertAddCertificateContextToStore(hRootCertStore, pCertContext, CERT_STORE_ADD_USE_EXISTING, NULL);
