@@ -26,7 +26,3 @@
 // Additional dependencies
 #include <fmt/format.h>
 #include <pugixml.hpp>
-
-
-
-

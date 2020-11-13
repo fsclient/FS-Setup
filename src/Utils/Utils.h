@@ -5,7 +5,7 @@ std::string httpGet(std::string_view url);
 
 bool installPackageByPath(std::filesystem::path filePath);
 
-std::string ByteArrayToString(std::unique_ptr<BYTE[]>);
+std::string ByteArrayToString(std::shared_ptr<BYTE[]>);
 bool CheckCertByThumbPrint(HCERTSTORE hRootCertStore, std::string thumbPrint);
 
 bool isPackageExists(std::string_view pkgName);

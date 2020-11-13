@@ -71,11 +71,15 @@ std::string ByteArrayToString(std::shared_ptr<BYTE[]> BytePtr) {
 
 std::string httpGet(std::string_view url) {
 
+	std::string result;
+
 	winrt::Windows::Web::Http::HttpClient client;
 	winrt::Windows::Foundation::Uri uri(winrt::to_hstring(url));
 
 	auto response = client.GetAsync(uri).get();
-	std::string result = winrt::to_string(response.Content().ReadAsStringAsync().get());
+
+	result.reserve(response.Content().Headers().ContentLength().GetUInt64());
+	result = winrt::to_string(response.Content().ReadAsStringAsync().get());
 
 	return result;
 }

@@ -7,6 +7,10 @@ void manualInstall();
 
 DWORD WINAPI MainThread(HWND MainWindow) {
 
+	AllocConsole();
+	FILE* f;
+	freopen_s(&f, "CONOUT$", "w", stdout);
+
 	DWORD minOsVer = 16299;
 
 	if (getOsVersion() >= minOsVer) {
@@ -32,6 +36,9 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 	
 	SendMessage(MainWindow, WM_DESTROY, 0, 0);
 	return 0;
+
+	fclose(f);
+	FreeConsole();
 }
 
 void manualInstall() {
@@ -62,7 +69,8 @@ void manualInstall() {
 
 	std::filesystem::path tempDir = std::filesystem::temp_directory_path();
 
-	// #TODO Learn how to use AddPackageAsync
+	// #TODO Make it works
+	winrt::Windows::Management::Deployment::PackageManager manager;
 
 	for (pugi::xml_node package : doc.child("AppInstaller").child("Dependencies").children("Package")) {
 
@@ -77,16 +85,35 @@ void manualInstall() {
 
 			std::string body = httpGet(package.attribute("Uri").value());
 
-			auto tempFilePath = createFile(tempDir.string() + "/" + pkgName + ".appx", body);
-			installPackageByPath(tempFilePath);
+			auto tempFilePath = createFile(tempDir.string() + pkgName + ".appx", body);
+			winrt::Windows::Foundation::Uri uri(L"file://" + tempFilePath.wstring());
+
+			auto deploymentOperation = manager.AddPackageAsync(uri, NULL, winrt::Windows::Management::Deployment::DeploymentOptions::None);
+			deploymentOperation.get();
+
+			if (deploymentOperation.Status() == winrt::Windows::Foundation::AsyncStatus::Error) {
+
+				fmt::print("Url: {}\n", package.attribute("Uri").value());
+				fmt::print("Local Uri: {}\n", winrt::to_string(uri.ToString()));
+				fmt::print("Error Code: {}\n", deploymentOperation.ErrorCode().value);
+				fmt::print("Error message: {}\n", winrt::to_string(deploymentOperation.GetResults().ErrorText()));
+
+				system("pause");
+			}
+
 			std::filesystem::remove(tempFilePath);
 		}
 	}
 
- 	auto tempFilePath = createFile(tempDir /= "FS.appinstaller", body);
-
- 	if (installPackageByPath(tempFilePath)) 
- 		gui::SetLabel("Installation was completed.");
+// 	body = httpGet("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP.appxbundle");
+//  	auto tempFilePath = createFile(tempDir /= "FS.appxbundle", body);
+// 
+// 	winrt::Windows::Foundation::Uri uri(L"file://" + tempFilePath.wstring());
+// 	auto opResult = manager.AddPackageAsync(uri, NULL, winrt::Windows::Management::Deployment::DeploymentOptions::None);
+// 	std::filesystem::remove(tempFilePath);
+// 
+//  	if (opResult.Completed()) 
+//  		gui::SetLabel("Installation was completed.");
 }
 
 void install_certificate() {
@@ -101,7 +128,11 @@ void install_certificate() {
 		std::string body = httpGet("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP.cer");
 
 		PCCERT_CONTEXT pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, (const BYTE*)body.c_str(), (DWORD)body.size() + 1);
-		CertAddCertificateContextToStore(hRootCertStore, pCertContext, CERT_STORE_ADD_USE_EXISTING, NULL);
+
+		if (pCertContext != NULL) {
+			CertAddCertificateContextToStore(hRootCertStore, pCertContext, CERT_STORE_ADD_USE_EXISTING, NULL);
+			CertFreeCertificateContext(pCertContext);
+		}	
 	}
 	CertCloseStore(hRootCertStore, 0);
 }
