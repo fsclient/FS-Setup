@@ -1,5 +1,5 @@
-#include "pch.h"
-#include "GUI Utils.h"
+#include "pch.hpp"
+#include "GUI Utils.hpp"
 #include "resource.h"
 
 #pragma comment(linker,"\"/manifestdependency:type='win32' \

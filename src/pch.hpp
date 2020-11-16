@@ -3,8 +3,8 @@
 // Precompiled headers
 
 // STD stuff
-#include <optional>
 #include <filesystem>
+#include <optional>
 #include <fstream>
 #include <thread>
 
@@ -18,11 +18,7 @@
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Web.Http.Headers.h>
 
-
-// boost
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/hex.hpp>
-
 // Additional dependencies
+#include <boost/algorithm/hex.hpp>
 #include <fmt/format.h>
 #include <pugixml.hpp>

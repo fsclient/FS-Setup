@@ -1,5 +1,5 @@
-#include "pch.h"
-#include "GUI Utils.h"
+#include "pch.hpp"
+#include "GUI Utils.hpp"
 
 int gui::ErrorMessageBox() {
 	std::wstring message = L"An error was occurred with code: ";
@@ -29,12 +29,12 @@ void gui::SetPending(bool value) {
 	}
 }
 
-void gui::SetLabel(std::string text) {
+void gui::SetLabel(std::string_view text) {
 	HWND hLabelStatic = GetLabelStaticHWND();
 	SetWindowText(hLabelStatic, winrt::to_hstring(text).c_str());
 }
 
-void gui::SetProgressStatic(std::string progress) {
+void gui::SetProgressStatic(std::string_view progress) {
 	HWND hProgressStatic = GetProgressStaticHWND();
 	SetWindowText(hProgressStatic, winrt::to_hstring(progress).c_str());
 }

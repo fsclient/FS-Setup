@@ -1,6 +1,6 @@
-#include "pch.h"
-#include "gui/GUI Utils.h"
-#include "Utils/Utils.h"
+#include "pch.hpp"
+#include "gui/GUI Utils.hpp"
+#include "Utils/Utils.hpp"
 
 void install_certificate();
 void manualInstall();
@@ -11,7 +11,7 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 	FILE* f;
 	freopen_s(&f, "CONOUT$", "w", stdout);
 
-	DWORD minOsVer = 16299;
+	int minOsVer = 16299;
 
 	if (getOsVersion() >= minOsVer) {
 
@@ -25,11 +25,9 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 			manualInstall();
 
 			gui::SetPending(false);
-			gui::SetFullProgress();
+			gui::SetFullProgress();;
 
-			using namespace std::literals::chrono_literals;
-
-			std::this_thread::sleep_for(3s);
+			std::this_thread::sleep_for(std::chrono::seconds(3));
 		}
 	}
 	else MessageBox(MainWindow, L"Your OS Version isn't supported.", L"Error", MB_ICONERROR | MB_OK);
@@ -52,7 +50,7 @@ void manualInstall() {
 
 	if (auto package = getPackageByFamilyName("24831TIRRSOFT.FS_7dqv9t6ww56qc")) {
 
-		std::string version = doc.child("AppInstaller").attribute("Version").value();
+		std::string_view version = doc.child("AppInstaller").attribute("Version").value();
 
 		const auto& [major, minor, build, revision] = package->Id().Version();
 		std::string localVersion = fmt::format("{}.{}.{}.{}", major, minor, build, revision);
@@ -67,17 +65,16 @@ void manualInstall() {
 		}
 	}
 
-	std::filesystem::path tempDir = std::filesystem::temp_directory_path();
-
 	// #TODO Make it works
 	winrt::Windows::Management::Deployment::PackageManager manager;
+	std::filesystem::path tempDir = std::filesystem::temp_directory_path();
 
 	for (pugi::xml_node package : doc.child("AppInstaller").child("Dependencies").children("Package")) {
 
 		if (std::strcmp(package.attribute("ProcessorArchitecture").value(), "x64"))
 			continue;
 
-		std::string pkgName = package.attribute("Name").value();
+		std::string_view pkgName = package.attribute("Name").value();
 
 		if (!isPackageExists(pkgName)) {
 
@@ -85,10 +82,14 @@ void manualInstall() {
 
 			std::string body = httpGet(package.attribute("Uri").value());
 
-			auto tempFilePath = createFile(tempDir.string() + pkgName + ".appx", body);
+			std::filesystem::path tempFilePath = tempDir.string() + pkgName.data() + ".appx";
+			std::ofstream file(tempFilePath, std::ios::binary);
+			file << body; file.close();
+
 			winrt::Windows::Foundation::Uri uri(L"file://" + tempFilePath.wstring());
 
-			auto deploymentOperation = manager.AddPackageAsync(uri, NULL, winrt::Windows::Management::Deployment::DeploymentOptions::None);
+			auto deploymentOperation = manager.AddPackageAsync(uri, NULL,
+				winrt::Windows::Management::Deployment::DeploymentOptions::None);
 			deploymentOperation.get();
 
 			if (deploymentOperation.Status() == winrt::Windows::Foundation::AsyncStatus::Error) {
@@ -106,14 +107,6 @@ void manualInstall() {
 	}
 
 // 	body = httpGet("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP.appxbundle");
-//  	auto tempFilePath = createFile(tempDir /= "FS.appxbundle", body);
-// 
-// 	winrt::Windows::Foundation::Uri uri(L"file://" + tempFilePath.wstring());
-// 	auto opResult = manager.AddPackageAsync(uri, NULL, winrt::Windows::Management::Deployment::DeploymentOptions::None);
-// 	std::filesystem::remove(tempFilePath);
-// 
-//  	if (opResult.Completed()) 
-//  		gui::SetLabel("Installation was completed.");
 }
 
 void install_certificate() {
