@@ -1,5 +1,6 @@
-#include "pch.h"
-#include "Utils.h"
+#include "pch.hpp"
+#include "Utils.hpp"
+#include "gui/GUI Utils.hpp"
 
 #pragma warning(disable : 6387)
 
@@ -39,7 +40,7 @@ std::optional<winrt::Windows::ApplicationModel::Package> getPackageByFamilyName(
 	return std::nullopt;
 }
 
-bool CheckCertByThumbPrint(HCERTSTORE hRootCertStore, std::string thumbPrint) {
+bool CheckCertByThumbPrint(HCERTSTORE hRootCertStore, std::string_view thumbPrint) {
 
 	PCCERT_CONTEXT pCertContext = NULL;
 
@@ -49,49 +50,82 @@ bool CheckCertByThumbPrint(HCERTSTORE hRootCertStore, std::string thumbPrint) {
 
 		CertGetCertificateContextProperty(pCertContext, CERT_SHA1_HASH_PROP_ID, nullptr, &length);
 
-		auto buffer = std::make_shared<BYTE[]>(length);
+		auto buffer = std::make_unique<BYTE[]>(length);
 		if (buffer == nullptr) return false;
 
 		CertGetCertificateContextProperty(pCertContext, CERT_SHA1_HASH_PROP_ID, buffer.get(), &length);
 
-		if (ByteArrayToString(buffer) == thumbPrint) return true;
+		std::string hexString;
+		boost::algorithm::hex_lower(buffer.get(), std::back_inserter(hexString));
+
+		if (hexString == thumbPrint) return true;
 	}
 	return false;
 }
 
-std::string ByteArrayToString(std::shared_ptr<BYTE[]> BytePtr) {
-
-	std::string hexString;
-
-	boost::algorithm::hex(BytePtr.get(), std::back_inserter(hexString));
-	boost::algorithm::to_lower(hexString);
-
-	return hexString;
-}
-
 std::string httpGet(std::string_view url) {
 
+	const enum sizes : unsigned int {
+		Byte = 1,
+		kiloByte = Byte * 1024,
+		megaByte = kiloByte * 1024,
+	};
+
 	std::string result;
-
 	winrt::Windows::Web::Http::HttpClient client;
-	winrt::Windows::Foundation::Uri uri(winrt::to_hstring(url));
 
-	auto response = client.GetAsync(uri).get();
+	auto asyncOperation = client.GetAsync(winrt::Windows::Foundation::Uri(winrt::to_hstring(url)));
+	asyncOperation.Progress([=](auto ResponseMessage, winrt::Windows::Web::Http::HttpProgress progressInfo) {
+		
+		if (progressInfo.TotalBytesToReceive) {
 
-	result.reserve(response.Content().Headers().ContentLength().GetUInt64());
+			float recieved = static_cast<float>(progressInfo.BytesReceived);
+			float total = static_cast<float>(progressInfo.TotalBytesToReceive.Value());
+
+			std::string outString;
+
+			if (total >= sizes::megaByte) fmt::format_to(std::back_inserter(outString), "Recieved {0:.3f}/{1:.3f} MiB", recieved / sizes::megaByte, total / sizes::megaByte);
+			else if (total >= sizes::kiloByte) fmt::format_to(std::back_inserter(outString), "Recieved {0:.3f}/{1:.3f} KiB", recieved / sizes::kiloByte, total / sizes::kiloByte);
+			else fmt::format_to(std::back_inserter(outString), "Recieved {}/{} bytes", recieved, total);
+
+			gui::SetProgressStatic(outString);
+			if (total >= sizes::megaByte * 5) {
+				gui::SetPending(false);
+				gui::SetProgress(progressInfo.BytesReceived, progressInfo.TotalBytesToReceive.Value());
+			}
+		}
+	});
+
+	auto response = asyncOperation.get();
+	result.reserve(response.Content().Headers().ContentLength().Value());
 	result = winrt::to_string(response.Content().ReadAsStringAsync().get());
+
+	
+	gui::SetFullProgress();
+	gui::SetProgressStatic("Download Complete.");
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(700));
+	gui::SetPending(true);
 
 	return result;
 }
 
-std::filesystem::path createFile(std::filesystem::path fp, std::string data) {
+int getOsVersion(void) {
 
-	std::ofstream file;
-	file.open(fp, std::ios::binary | std::ios::out);
-	file << data;
-	file.close();
+	NTSTATUS(WINAPI * RtlGetVersion)(LPOSVERSIONINFOEXW);
+	OSVERSIONINFOEXW osInfo;
 
-	return fp;
+	*(FARPROC*)&RtlGetVersion = GetProcAddress(GetModuleHandleA("ntdll"), "RtlGetVersion");
+
+	if (RtlGetVersion != NULL) {
+
+		osInfo.dwOSVersionInfoSize = sizeof(osInfo);
+		RtlGetVersion(&osInfo);
+
+		return static_cast<int>(osInfo.dwBuildNumber);
+	}
+
+	return 0;
 }
 
 bool installPackageByPath(std::filesystem::path filePath) {
@@ -120,22 +154,4 @@ bool installPackageByPath(std::filesystem::path filePath) {
 		return true;
 	}
 	return false;
-}
-
-DWORD getOsVersion() {
-
-	NTSTATUS(WINAPI * RtlGetVersion)(LPOSVERSIONINFOEXW);
-	OSVERSIONINFOEXW osInfo;
-
-	*(FARPROC*)&RtlGetVersion = GetProcAddress(GetModuleHandleA("ntdll"), "RtlGetVersion");
-
-	if (NULL != RtlGetVersion) {
-
-		osInfo.dwOSVersionInfoSize = sizeof(osInfo);
-		RtlGetVersion(&osInfo);
-
-		return osInfo.dwBuildNumber;
-	}
-
-	return 0;
 }
