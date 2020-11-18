@@ -195,7 +195,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="res\resource.h" />
+    <ClInclude Include="res\resource.hpp" />
     <ClInclude Include="src\gui\GUI Utils.hpp" />
     <ClInclude Include="src\pch.hpp" />
     <ClInclude Include="src\Utils\Utils.hpp" />

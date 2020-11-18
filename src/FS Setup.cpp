@@ -25,7 +25,7 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 			manualInstall();
 
 			gui::SetPending(false);
-			gui::SetFullProgress();;
+			gui::SetFullProgress();
 
 			std::this_thread::sleep_for(std::chrono::seconds(3));
 		}
@@ -65,7 +65,7 @@ void manualInstall() {
 		}
 	}
 
-	// #TODO Make it works
+	// https://store.rg-adguard.net/ may help
 	winrt::Windows::Management::Deployment::PackageManager manager;
 	std::filesystem::path tempDir = std::filesystem::temp_directory_path();
 
