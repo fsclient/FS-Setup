@@ -7,10 +7,6 @@ void manualInstall();
 
 DWORD WINAPI MainThread(HWND MainWindow) {
 
-	AllocConsole();
-	FILE* f;
-	freopen_s(&f, "CONOUT$", "w", stdout);
-
 	int minOsVer = 16299;
 
 	if (getOsVersion() >= minOsVer) {
@@ -34,9 +30,6 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 	
 	SendMessage(MainWindow, WM_DESTROY, 0, 0);
 	return 0;
-
-	fclose(f);
-	FreeConsole();
 }
 
 void manualInstall() {
@@ -65,44 +58,51 @@ void manualInstall() {
 		}
 	}
 
-	// https://store.rg-adguard.net/ may help
 	winrt::Windows::Management::Deployment::PackageManager manager;
 	std::filesystem::path tempDir = std::filesystem::temp_directory_path();
 
 	for (pugi::xml_node package : doc.child("AppInstaller").child("Dependencies").children("Package")) {
 
-		if (std::strcmp(package.attribute("ProcessorArchitecture").value(), "x64"))
-			continue;
+		if (!std::strcmp(package.attribute("ProcessorArchitecture").value(), "x64")) {
 
-		std::string_view pkgName = package.attribute("Name").value();
+			std::string_view pkgName = package.attribute("Name").value();
 
-		if (!isPackageExists(pkgName)) {
+			if (!isPackageExists(pkgName)) {
 
-			gui::SetLabel(pkgName);
+				gui::SetLabel(pkgName);
 
-			std::string body = httpGet(package.attribute("Uri").value());
+				std::string body = httpGet(package.attribute("Uri").value());
+				winrt::hstring wbody = winrt::to_hstring(body);
 
-			std::filesystem::path tempFilePath = tempDir.string() + pkgName.data() + ".appx";
-			std::ofstream file(tempFilePath, std::ios::binary);
-			file << body; file.close();
+				std::filesystem::path tempFilePath = tempDir.string() + pkgName.data() + ".appx";
+				std::wofstream file(tempFilePath, std::ios::binary);
+				file.write(wbody.data(), wbody.size()); file.close();
 
-			winrt::Windows::Foundation::Uri uri(L"file://" + tempFilePath.wstring());
+				winrt::Windows::Foundation::Uri uri(L"file://" + tempFilePath.wstring());
 
-			auto deploymentOperation = manager.AddPackageAsync(uri, NULL,
-				winrt::Windows::Management::Deployment::DeploymentOptions::None);
-			deploymentOperation.get();
+				auto deploymentOperation = manager.AddPackageAsync(uri, NULL,
+					winrt::Windows::Management::Deployment::DeploymentOptions::None);
+				deploymentOperation.get();
 
-			if (deploymentOperation.Status() == winrt::Windows::Foundation::AsyncStatus::Error) {
+				if (deploymentOperation.Status() == winrt::Windows::Foundation::AsyncStatus::Error) {
 
-				fmt::print("Url: {}\n", package.attribute("Uri").value());
-				fmt::print("Local Uri: {}\n", winrt::to_string(uri.ToString()));
-				fmt::print("Error Code: {}\n", deploymentOperation.ErrorCode().value);
-				fmt::print("Error message: {}\n", winrt::to_string(deploymentOperation.GetResults().ErrorText()));
+					AllocConsole();
+					FILE* f;
+					freopen_s(&f, "CONOUT$", "w", stdout);
 
-				system("pause");
+					fmt::print("Url: {}\n", package.attribute("Uri").value());
+					fmt::print("Local Uri: {}\n", winrt::to_string(uri.ToString()));
+					fmt::print("Error Code: {}\n", deploymentOperation.ErrorCode().value);
+					fmt::print("Error message: {}\n", winrt::to_string(deploymentOperation.GetResults().ErrorText()));
+
+					system("pause");
+
+					fclose(f);
+					FreeConsole();
+				}
+
+				std::filesystem::remove(tempFilePath);
 			}
-
-			std::filesystem::remove(tempFilePath);
 		}
 	}
 
