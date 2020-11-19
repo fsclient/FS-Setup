@@ -2,37 +2,60 @@
 #include "gui/GUI Utils.hpp"
 #include "Utils/Utils.hpp"
 
-void install_certificate();
-void manualInstall();
+bool manualInstall();
 
 DWORD WINAPI MainThread(HWND MainWindow) {
 
-	int minOsVer = 16299;
+	if (getOsVersion() >= 16299) {
 
-	if (getOsVersion() >= minOsVer) {
+		auto installCertificate = [] {
 
-		install_certificate();
+			gui::SetLabel("Installing certificate...");
+			gui::SetPending(true);
+
+			HCERTSTORE hRootCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM, X509_ASN_ENCODING, NULL, CERT_SYSTEM_STORE_LOCAL_MACHINE, L"Root");
+
+			if (!CheckCertByThumbPrint(hRootCertStore, "24542010cb06ad6ab320c84a984c7862e029fb08")) {
+
+				std::string body = httpGet("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP.cer");
+
+				PCCERT_CONTEXT pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, (const BYTE*)body.c_str(), (DWORD)body.size() + 1);
+
+				if (pCertContext != NULL) {
+					CertAddCertificateContextToStore(hRootCertStore, pCertContext, CERT_STORE_ADD_USE_EXISTING, NULL);
+					CertFreeCertificateContext(pCertContext);
+				}
+			}
+			CertCloseStore(hRootCertStore, 0);
+		}; installCertificate();
 
 		if (isPackageExists("Microsoft.DesktopAppInstaller")) {
-			ShellExecute(NULL, L"open", L"ms-appinstaller:?source=https://fsclient.github.io/fs/FSClient.UWP.appinstaller", NULL, NULL, SW_SHOWDEFAULT);
+
+			gui::SetLabel("Trying to auto install...");
+
+			auto status = installPackageByAppInstallerUrl("https://fsclient.github.io/fs/FSClient.UWP.appinstaller");
+
+			if (status == winrt::Windows::Foundation::AsyncStatus::Completed)
+				gui::SetProgressStatic("Successfully installed.");
+			else if (status == winrt::Windows::Foundation::AsyncStatus::Error)
+				manualInstall();
+
+			//ShellExecute(NULL, L"open", L"ms-appinstaller:?source=https://fsclient.github.io/fs/FSClient.UWP.appinstaller", NULL, NULL, SW_SHOWDEFAULT);
 		}	
-		else {
-			
-			manualInstall();
-
-			gui::SetPending(false);
-			gui::SetFullProgress();
-
-			std::this_thread::sleep_for(std::chrono::seconds(3));
-		}
+		else manualInstall();
 	}
 	else MessageBox(MainWindow, L"Your OS Version isn't supported.", L"Error", MB_ICONERROR | MB_OK);
+
+	gui::SetPending(false);
+	gui::SetFullProgress();
+
+	std::this_thread::sleep_for(std::chrono::seconds(3));
 	
 	SendMessage(MainWindow, WM_DESTROY, 0, 0);
 	return 0;
 }
 
-void manualInstall() {
+bool manualInstall() {
 
 	gui::SetLabel("Trying to manual install...");
 
@@ -54,12 +77,9 @@ void manualInstall() {
 
 		if (localVersion == version && pkgArchitecture == ProcessorArchitecture::X64) {
 			gui::SetLabel("FS Client is up-to-dated");
-			return;
+			return true;
 		}
 	}
-
-	winrt::Windows::Management::Deployment::PackageManager manager;
-	std::filesystem::path tempDir = std::filesystem::temp_directory_path();
 
 	for (pugi::xml_node package : doc.child("AppInstaller").child("Dependencies").children("Package")) {
 
@@ -71,61 +91,16 @@ void manualInstall() {
 
 				gui::SetLabel(pkgName);
 
-				std::string body = httpGet(package.attribute("Uri").value());
-				winrt::hstring wbody = winrt::to_hstring(body);
+				auto status = installPackageByUrl(package.attribute("Uri").value());
 
-				std::filesystem::path tempFilePath = tempDir.string() + pkgName.data() + ".appx";
-				std::wofstream file(tempFilePath, std::ios::binary);
-				file.write(wbody.data(), wbody.size()); file.close();
-
-				winrt::Windows::Foundation::Uri uri(L"file://" + tempFilePath.wstring());
-
-				auto deploymentOperation = manager.AddPackageAsync(uri, NULL,
-					winrt::Windows::Management::Deployment::DeploymentOptions::None);
-				deploymentOperation.get();
-
-				if (deploymentOperation.Status() == winrt::Windows::Foundation::AsyncStatus::Error) {
-
-					AllocConsole();
-					FILE* f;
-					freopen_s(&f, "CONOUT$", "w", stdout);
-
-					fmt::print("Url: {}\n", package.attribute("Uri").value());
-					fmt::print("Local Uri: {}\n", winrt::to_string(uri.ToString()));
-					fmt::print("Error Code: {}\n", deploymentOperation.ErrorCode().value);
-					fmt::print("Error message: {}\n", winrt::to_string(deploymentOperation.GetResults().ErrorText()));
-
-					system("pause");
-
-					fclose(f);
-					FreeConsole();
-				}
-
-				std::filesystem::remove(tempFilePath);
+				if (status == winrt::Windows::Foundation::AsyncStatus::Completed)
+					gui::SetProgressStatic("Successfully installed.");
+				else if (status == winrt::Windows::Foundation::AsyncStatus::Error)
+					return false;
 			}
 		}
 	}
 
 // 	body = httpGet("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP.appxbundle");
-}
-
-void install_certificate() {
-
-	gui::SetLabel("Installing certificate...");
-	gui::SetPending(true);
-
-	HCERTSTORE hRootCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM, X509_ASN_ENCODING, NULL, CERT_SYSTEM_STORE_LOCAL_MACHINE, L"Root");
-
-	if (!CheckCertByThumbPrint(hRootCertStore, "24542010cb06ad6ab320c84a984c7862e029fb08")) {
-
-		std::string body = httpGet("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP.cer");
-
-		PCCERT_CONTEXT pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, (const BYTE*)body.c_str(), (DWORD)body.size() + 1);
-
-		if (pCertContext != NULL) {
-			CertAddCertificateContextToStore(hRootCertStore, pCertContext, CERT_STORE_ADD_USE_EXISTING, NULL);
-			CertFreeCertificateContext(pCertContext);
-		}	
-	}
-	CertCloseStore(hRootCertStore, 0);
+	return true;
 }
