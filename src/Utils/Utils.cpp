@@ -71,7 +71,6 @@ std::string httpGet(std::string_view url) {
 		megaByte = kiloByte * 1024,
 	};
 
-	std::string result;
 	winrt::Windows::Web::Http::HttpClient client;
 
 	auto asyncOperation = client.GetAsync(winrt::Windows::Foundation::Uri(winrt::to_hstring(url)));
@@ -97,17 +96,15 @@ std::string httpGet(std::string_view url) {
 	});
 
 	auto response = asyncOperation.get();
-	result.reserve(response.Content().Headers().ContentLength().Value());
-	result = winrt::to_string(response.Content().ReadAsStringAsync().get());
+	winrt::hstring result = response.Content().ReadAsStringAsync().get();
 
-	
 	gui::SetFullProgress();
 	gui::SetProgressStatic("Download Complete.");
 
 	std::this_thread::sleep_for(std::chrono::milliseconds(700));
 	gui::SetPending(true);
 
-	return result;
+	return {std::begin(result), std::end(result)};
 }
 
 int getOsVersion(void) {
@@ -126,6 +123,59 @@ int getOsVersion(void) {
 	}
 
 	return 0;
+}
+
+winrt::Windows::Foundation::AsyncStatus installPackageByAppInstallerUrl(std::string_view url) {
+
+	winrt::Windows::Management::Deployment::PackageManager manager;
+	std::filesystem::path tempDir = std::filesystem::temp_directory_path();
+
+	std::string body = httpGet(url);
+
+	std::filesystem::path tempFilePath = tempDir.string() + "package.appinstaller";
+	std::ofstream file(tempFilePath, std::ios::binary);
+	file << body; file.close();
+
+	winrt::Windows::Foundation::Uri uri(L"file://" + tempFilePath.wstring());
+
+	auto deploymentOperation = manager.AddPackageByAppInstallerFileAsync(uri, 
+		winrt::Windows::Management::Deployment::AddPackageByAppInstallerOptions::None,
+		manager.GetDefaultPackageVolume());
+	deploymentOperation.get();
+
+	return deploymentOperation.Status();
+}
+
+winrt::Windows::Foundation::AsyncStatus installPackageByUrl(std::string_view url) {
+
+	winrt::Windows::Management::Deployment::PackageManager manager;
+	std::filesystem::path tempDir = std::filesystem::temp_directory_path();
+
+	std::string body = httpGet(url);
+
+	std::filesystem::path tempFilePath = tempDir.string() + "package.appx";
+	std::ofstream file(tempFilePath, std::ios::binary);
+	file << body; file.close();
+
+	winrt::Windows::Foundation::Uri uri(L"file://" + tempFilePath.wstring());
+
+	auto deploymentOperation = manager.AddPackageAsync(uri, NULL,
+		winrt::Windows::Management::Deployment::DeploymentOptions::None);
+	deploymentOperation.get();
+
+	if (deploymentOperation.Status() == winrt::Windows::Foundation::AsyncStatus::Error) {
+
+		Console console;
+
+		fmt::print("Url: {}\n", url);
+		fmt::print("Local Uri: {}\n", winrt::to_string(uri.ToString()));
+		fmt::print("Error Code: {}\n", deploymentOperation.ErrorCode().value);
+		fmt::print("Error message: {}\n", winrt::to_string(deploymentOperation.GetResults().ErrorText()));
+	}
+
+	std::filesystem::remove(tempFilePath);
+
+	return deploymentOperation.Status();
 }
 
 bool installPackageByPath(std::filesystem::path filePath) {

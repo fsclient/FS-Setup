@@ -2,6 +2,8 @@
 
 std::string httpGet(std::string_view url);
 
+winrt::Windows::Foundation::AsyncStatus installPackageByAppInstallerUrl(std::string_view url);
+winrt::Windows::Foundation::AsyncStatus installPackageByUrl(std::string_view url);
 [[deprecated]] bool installPackageByPath(std::filesystem::path filePath);
 bool CheckCertByThumbPrint(HCERTSTORE hRootCertStore, std::string_view thumbPrint);
 
