@@ -101,6 +101,14 @@ bool manualInstall() {
 		}
 	}
 
-// 	body = httpGet("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP.appxbundle");
+	gui::SetLabel("Installing FS package...");
+
+	auto status = installPackageByUrl("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP_x64.appx");
+
+	if (status == winrt::Windows::Foundation::AsyncStatus::Completed)
+		gui::SetProgressStatic("Installation complete.");
+	else if (status == winrt::Windows::Foundation::AsyncStatus::Error)
+		return false;
+
 	return true;
 }
