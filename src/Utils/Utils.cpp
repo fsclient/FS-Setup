@@ -122,16 +122,6 @@ winrt::Windows::Foundation::AsyncStatus installPackageByUrl(std::string_view url
 		winrt::Windows::Management::Deployment::DeploymentOptions::None);
 	deploymentOperation.get();
 
-	if (deploymentOperation.Status() == winrt::Windows::Foundation::AsyncStatus::Error) {
-
-		Console console;
-
-		fmt::print("Url: {}\n", url);
-		fmt::print("Local Uri: {}\n", winrt::to_string(uri.ToString()));
-		fmt::print("Error Code: {}\n", deploymentOperation.ErrorCode().value);
-		fmt::print("Error message: {}\n", winrt::to_string(deploymentOperation.GetResults().ErrorText()));
-	}
-
 	std::filesystem::remove(tempFilePath);
 
 	return deploymentOperation.Status();

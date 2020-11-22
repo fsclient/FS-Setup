@@ -22,23 +22,3 @@
 #include <boost/algorithm/hex.hpp>
 #include <fmt/format.h>
 #include <pugixml.hpp>
-
-class Console {
-
-public:
-
-	Console() {
-
-		AllocConsole();
-		freopen_s(&f, "CONOUT$", "w", stdout);
-	}
-	~Console() {
-
-		system("pause");
-		fclose(f);
-		FreeConsole();
-	}
-
-private:
-	FILE* f;
-};
