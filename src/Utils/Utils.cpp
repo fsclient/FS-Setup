@@ -136,7 +136,7 @@ bool CheckCertByThumbPrint(HCERTSTORE hRootCertStore, std::string_view thumbPrin
 
 		for (size_t i = 0; i < length; i++) {
 			result.append(&hexDigits[((int)bytes[i] & 0xf0) >> 4], 1);
-			result.append(&hexDigits[ (int)bytes[i] & 0xf],		   1);
+			result.append(&hexDigits[(int)bytes[i] & 0xf], 1);
 		}
 
 		return result;
