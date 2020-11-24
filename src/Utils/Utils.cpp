@@ -15,7 +15,7 @@ std::string httpGet(std::string_view url) {
 	winrt::Windows::Web::Http::HttpClient client;
 
 	auto asyncOperation = client.GetAsync(winrt::Windows::Foundation::Uri(winrt::to_hstring(url)));
-	asyncOperation.Progress([=](auto ResponseMessage, winrt::Windows::Web::Http::HttpProgress progressInfo) {
+	asyncOperation.Progress([](auto ResponseMessage, winrt::Windows::Web::Http::HttpProgress progressInfo) {
 
 		if (progressInfo.TotalBytesToReceive) {
 
@@ -100,6 +100,14 @@ winrt::Windows::Foundation::AsyncStatus installPackageByAppInstallerUrl(std::str
 	auto deploymentOperation = manager.AddPackageByAppInstallerFileAsync(uri, 
 		winrt::Windows::Management::Deployment::AddPackageByAppInstallerOptions::None,
 		manager.GetDefaultPackageVolume());
+
+	deploymentOperation.Progress([](auto DeploymentResult, winrt::Windows::Management::Deployment::DeploymentProgress progressInfo) {
+
+		gui::SetPending(false);
+		gui::SetProgress(progressInfo.percentage, 100);
+	});
+
+	gui::SetProgressStatic("Installing...");
 	deploymentOperation.get();
 
 	return deploymentOperation.Status();
@@ -120,6 +128,14 @@ winrt::Windows::Foundation::AsyncStatus installPackageByUrl(std::string_view url
 
 	auto deploymentOperation = manager.AddPackageAsync(uri, NULL,
 		winrt::Windows::Management::Deployment::DeploymentOptions::None);
+
+	deploymentOperation.Progress([](auto DeploymentResult, winrt::Windows::Management::Deployment::DeploymentProgress progressInfo) {
+
+			gui::SetPending(false);
+			gui::SetProgress(progressInfo.percentage, 100);
+	});
+
+	gui::SetProgressStatic("Installing...");
 	deploymentOperation.get();
 
 	std::filesystem::remove(tempFilePath);
