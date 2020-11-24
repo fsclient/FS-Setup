@@ -102,7 +102,6 @@ winrt::Windows::Foundation::AsyncStatus installPackageByAppInstallerUrl(std::str
 		manager.GetDefaultPackageVolume());
 
 	deploymentOperation.Progress([](auto DeploymentResult, winrt::Windows::Management::Deployment::DeploymentProgress progressInfo) {
-
 		gui::SetPending(false);
 		gui::SetProgress(progressInfo.percentage, 100);
 	});
@@ -130,7 +129,6 @@ winrt::Windows::Foundation::AsyncStatus installPackageByUrl(std::string_view url
 		winrt::Windows::Management::Deployment::DeploymentOptions::None);
 
 	deploymentOperation.Progress([](auto DeploymentResult, winrt::Windows::Management::Deployment::DeploymentProgress progressInfo) {
-
 			gui::SetPending(false);
 			gui::SetProgress(progressInfo.percentage, 100);
 	});
