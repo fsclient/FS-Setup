@@ -6,9 +6,7 @@ bool manualInstall();
 
 DWORD WINAPI MainThread(HWND MainWindow) {
 
-	if (getOsVersion() >= 16299) {
-
-		 {
+	 {
 			gui::SetLabel("Installing certificate...");
 			gui::SetPending(true);
 
@@ -28,22 +26,20 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 			CertCloseStore(hRootCertStore, 0);
 		 }
 
-		if (isPackageExists("Microsoft.DesktopAppInstaller")) {
+	if (isPackageExists("Microsoft.DesktopAppInstaller")) {
 
-			gui::SetLabel("Trying to auto install...");
+		gui::SetLabel("Trying to auto install...");
 
-			auto status = installPackageByAppInstallerUrl("https://fsclient.github.io/fs/FSClient.UWP.appinstaller");
+		auto status = installPackageByAppInstallerUrl("https://fsclient.github.io/fs/FSClient.UWP.appinstaller");
 
-			if (status == winrt::Windows::Foundation::AsyncStatus::Completed)
-				gui::SetProgressStatic("Successfully installed.");
-			else if (status == winrt::Windows::Foundation::AsyncStatus::Error)
-				manualInstall();
+		if (status == winrt::Windows::Foundation::AsyncStatus::Completed)
+			gui::SetProgressStatic("Successfully installed.");
+		else if (status == winrt::Windows::Foundation::AsyncStatus::Error)
+			manualInstall();
 
-			//ShellExecute(NULL, L"open", L"ms-appinstaller:?source=https://fsclient.github.io/fs/FSClient.UWP.appinstaller", NULL, NULL, SW_SHOWDEFAULT);
-		}	
-		else manualInstall();
-	}
-	else MessageBox(MainWindow, L"Your OS Version isn't supported.", L"Error", MB_ICONERROR | MB_OK);
+		//ShellExecute(NULL, L"open", L"ms-appinstaller:?source=https://fsclient.github.io/fs/FSClient.UWP.appinstaller", NULL, NULL, SW_SHOWDEFAULT);
+	}	
+	else manualInstall();
 
 	gui::SetPending(false);
 	gui::SetFullProgress();

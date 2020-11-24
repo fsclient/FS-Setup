@@ -1,4 +1,5 @@
 #include "pch.hpp"
+#include "Utils/Utils.hpp"
 #include "GUI Utils.hpp"
 #include "resource.hpp"
 
@@ -15,6 +16,11 @@ HWND hLabelStatic;
 HWND hProgressStatic;
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd) {
+
+	if (getOsVersion() < 16299) {
+		MessageBox(NULL, L"Your OS Version isn't supported.\nMinimal OS version 10.0.16299", L"Error", MB_ICONERROR | MB_OK);
+		return 1;
+	}
 
 	WNDCLASSEX wClass;
 	ZeroMemory(&wClass, sizeof(WNDCLASSEX));
