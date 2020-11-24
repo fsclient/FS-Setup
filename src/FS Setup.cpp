@@ -8,8 +8,7 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 
 	if (getOsVersion() >= 16299) {
 
-		auto installCertificate = [] {
-
+		 {
 			gui::SetLabel("Installing certificate...");
 			gui::SetPending(true);
 
@@ -27,7 +26,7 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 				}
 			}
 			CertCloseStore(hRootCertStore, 0);
-		}; installCertificate();
+		 }
 
 		if (isPackageExists("Microsoft.DesktopAppInstaller")) {
 

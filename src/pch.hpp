@@ -19,6 +19,5 @@
 #include <winrt/Windows.Web.Http.Headers.h>
 
 // Additional dependencies
-#include <boost/algorithm/hex.hpp>
 #include <fmt/format.h>
 #include <pugixml.hpp>

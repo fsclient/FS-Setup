@@ -129,6 +129,19 @@ winrt::Windows::Foundation::AsyncStatus installPackageByUrl(std::string_view url
 
 bool CheckCertByThumbPrint(HCERTSTORE hRootCertStore, std::string_view thumbPrint) {
 
+	auto hex = [](std::byte* bytes, size_t length) {
+
+		std::string result;
+		std::string_view hexDigits = "0123456789abcdef";
+
+		for (size_t i = 0; i < length; i++) {
+			result.append(&hexDigits[((int)bytes[i] & 0xf0) >> 4], 1);
+			result.append(&hexDigits[ (int)bytes[i] & 0xf],		   1);
+		}
+
+		return result;
+	};
+
 	PCCERT_CONTEXT pCertContext = NULL;
 
 	while (pCertContext = CertEnumCertificatesInStore(hRootCertStore, pCertContext)) {
@@ -137,15 +150,13 @@ bool CheckCertByThumbPrint(HCERTSTORE hRootCertStore, std::string_view thumbPrin
 
 		CertGetCertificateContextProperty(pCertContext, CERT_SHA1_HASH_PROP_ID, nullptr, &length);
 
-		auto buffer = std::make_unique<BYTE[]>(length);
+		auto buffer = std::make_unique<std::byte[]>(length);
 		if (buffer == nullptr) return false;
 
 		CertGetCertificateContextProperty(pCertContext, CERT_SHA1_HASH_PROP_ID, buffer.get(), &length);
 
-		std::string hexString;
-		boost::algorithm::hex_lower(buffer.get(), std::back_inserter(hexString));
-
-		if (hexString == thumbPrint) return true;
+		if (hex(buffer.get(), length) == thumbPrint)
+			return true;
 	}
 	return false;
 }
