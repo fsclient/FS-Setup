@@ -6,25 +6,25 @@ bool manualInstall();
 
 DWORD WINAPI MainThread(HWND MainWindow) {
 
-	 {
-			gui::SetLabel("Installing certificate...");
-			gui::SetPending(true);
+	{
+		gui::SetLabel("Installing certificate...");
+		gui::SetPending(true);
 
-			HCERTSTORE hRootCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM, X509_ASN_ENCODING, NULL, CERT_SYSTEM_STORE_LOCAL_MACHINE, L"Root");
+		HCERTSTORE hRootCertStore = CertOpenStore(CERT_STORE_PROV_SYSTEM, X509_ASN_ENCODING, NULL, CERT_SYSTEM_STORE_LOCAL_MACHINE, L"Root");
 
-			if (!CheckCertByThumbPrint(hRootCertStore, "24542010cb06ad6ab320c84a984c7862e029fb08")) {
+		if (!CheckCertByThumbPrint(hRootCertStore, "24542010cb06ad6ab320c84a984c7862e029fb08")) {
 
-				std::string body = httpGet("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP.cer");
+			std::string body = httpGet("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP.cer");
 
-				PCCERT_CONTEXT pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, (const BYTE*)body.c_str(), (DWORD)body.size() + 1);
+			PCCERT_CONTEXT pCertContext = CertCreateCertificateContext(X509_ASN_ENCODING, (const BYTE*)body.c_str(), (DWORD)body.size() + 1);
 
-				if (pCertContext != NULL) {
-					CertAddCertificateContextToStore(hRootCertStore, pCertContext, CERT_STORE_ADD_USE_EXISTING, NULL);
-					CertFreeCertificateContext(pCertContext);
-				}
+			if (pCertContext != NULL) {
+				CertAddCertificateContextToStore(hRootCertStore, pCertContext, CERT_STORE_ADD_USE_EXISTING, NULL);
+				CertFreeCertificateContext(pCertContext);
 			}
-			CertCloseStore(hRootCertStore, 0);
-		 }
+		}
+		CertCloseStore(hRootCertStore, 0);
+	}
 
 	if (isPackageExists("Microsoft.DesktopAppInstaller")) {
 
