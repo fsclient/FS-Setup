@@ -26,7 +26,7 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 		CertCloseStore(hRootCertStore, 0);
 	}
 
-	if (isPackageExists("Microsoft.DesktopAppInstaller")) {
+	if (!isPackageExists("Microsoft.DesktopAppInstaller")) {
 
 		gui::SetLabel("Trying to auto install...");
 
@@ -59,6 +59,18 @@ bool manualInstall() {
 	pugi::xml_document doc;
 	doc.load_string(body.c_str());
 
+	SYSTEM_INFO info;
+	GetNativeSystemInfo(&info);
+	using winrt::Windows::System::ProcessorArchitecture;
+	auto CurrArch = (ProcessorArchitecture)info.wProcessorArchitecture;
+
+	std::map<ProcessorArchitecture, std::string_view> Arch2Str = {
+		{ProcessorArchitecture::X86, "x86"},
+		{ProcessorArchitecture::X64, "x64"},
+		{ProcessorArchitecture::Arm, "arm"}
+	};
+	std::string_view CurrStrArch = Arch2Str[CurrArch];
+
 	if (auto package = getPackageByFamilyName("24831TIRRSOFT.FS_7dqv9t6ww56qc")) {
 
 		std::string_view version = doc.child("AppInstaller").attribute("Version").value();
@@ -66,11 +78,7 @@ bool manualInstall() {
 		const auto& [major, minor, build, revision] = package->Id().Version();
 		std::string localVersion = fmt::format("{}.{}.{}.{}", major, minor, build, revision);
 
-		using winrt::Windows::System::ProcessorArchitecture;
-
-		ProcessorArchitecture pkgArchitecture = package->Id().Architecture();
-
-		if (localVersion == version && pkgArchitecture == ProcessorArchitecture::X64) {
+		if (localVersion == version && package->Id().Architecture() == CurrArch) {
 			gui::SetLabel("FS Client is up-to-dated");
 			return true;
 		}
@@ -78,7 +86,7 @@ bool manualInstall() {
 
 	for (pugi::xml_node package : doc.child("AppInstaller").child("Dependencies").children("Package")) {
 
-		if (!std::strcmp(package.attribute("ProcessorArchitecture").value(), "x64")) {
+		if (package.attribute("ProcessorArchitecture").value() == CurrStrArch) {
 
 			std::string_view pkgName = package.attribute("Name").value();
 
@@ -98,7 +106,7 @@ bool manualInstall() {
 
 	gui::SetLabel("Installing FS package...");
 
-	auto status = installPackageByUrl("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP_x64.appx");
+	auto status = installPackageByUrl(fmt::format("https://fsclient.github.io/fs/FSClient.UWP/FSClient.UWP_{}.appx", CurrStrArch));
 
 	if (status == winrt::Windows::Foundation::AsyncStatus::Completed)
 		gui::SetProgressStatic("Installation complete.");
