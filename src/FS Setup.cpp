@@ -26,7 +26,7 @@ DWORD WINAPI MainThread(HWND MainWindow) {
 		CertCloseStore(hRootCertStore, 0);
 	}
 
-	if (!isPackageExists("Microsoft.DesktopAppInstaller")) {
+	if (isPackageExists("Microsoft.DesktopAppInstaller")) {
 
 		gui::SetLabel("Trying to auto install...");
 
