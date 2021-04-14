@@ -7,4 +7,5 @@ HOW TO BUILD:
 1. clone and build vcpkg 
 2. integrate it to visual studio
 3. install pugixml and fmt libs (i used static)
-4. Build the application
+4. Install C++ WinRT Visual Studio extension
+5. Build the application
